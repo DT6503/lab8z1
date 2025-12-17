@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #5cb85c;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #4cae4c;
+        }
+        .filter-section {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+        .filter-btn {
+            background-color: #6c757d;
+            flex: 1;
+        }
+        .filter-btn.active {
+            background-color: #5cb85c;
+        }
+        .filter-btn:hover {
+            background-color: #545b62;
+        }
+        .filter-btn.active:hover {
+            background-color: #4cae4c;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            animation: fadeIn 0.3s ease;
+        }
+        li.completed {
+            text-decoration: line-through; /*зачёркивание*/
+            color: #888;
+            background: #f0f0f0;
+        }
+        li button {
+            margin-left: 10px;
+            background-color: #d9534f;
+            border-color: #d43f3a;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        li button:hover {
+            background-color: #c9302c;
+        }
+        .task-text {
+            flex: 1;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>ToDo List</h1>
+        <div class="input-section">
+            <input type="text" id="taskInput" placeholder="Введите задачу">
+            <button id="addTaskBtn">Добавить</button>
+        </div>
+        <div class="filter-section">
+            <button id="filterAll" class="filter-btn active">Все</button>
+            <button id="filterCompleted" class="filter-btn">Выполненные</button>
+            <button id="filterUncompleted" class="filter-btn">Невыполненные</button>
+        </div>
+        <ul id="taskList"></ul>
+    </div>
+
+    <script>
+       
+
+        //ущу нужные эл-ты в html
+document.addEventListener('DOMContentLoaded', function()
+{
+const taskInput = document.getElementById('taskInput'); //ищу по всему html
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const taskList = document.getElementById('taskList');
+            const filterAll = document.getElementById('filterAll');
+            const filterCompleted = document.getElementById('filterCompleted');
+            const filterUncompleted = document.getElementById('filterUncompleted');
+
+
+//подключаю lokalStorage - встроен-ое зран-ще д-х
+//"Положи это в ящик с надписью 'tasks'"
+let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+let currentFilter = 'all';
+
+function saveTasks(){
+    localStorage.setItem('tasks', JSON.stringify(tasks)); //JSON.stringify() превращает массив в строку для хранения.
+}
+
+
+
+// ф-ция ОТРИСОВКИ задач на странице
+function renderTasks(){
+    taskList.innerHTML = '';
+
+
+
+const filteredTasks = tasks.filter(task => {
+    if (currentFilter === 'completed') return task.completed; //код понимает сам
+    if (currentFilter === 'uncompleted') return !task.completed;
+    return true;
+});
+
+//если задач нет
+if (filteredTasks.length === 0) {
+                    const emptyMessage = document.createElement('li');
+                    emptyMessage.textContent = currentFilter === 'all' ? 'Нет задач' : 
+                                              currentFilter === 'completed' ? 'Нет выполненных задач' : 
+                                              'Нет невыполненных задач'; //иначе
+                    emptyMessage.style.textAlign = 'center';
+                    emptyMessage.style.color = '#888';
+                    emptyMessage.style.fontStyle = 'italic';
+                    taskList.appendChild(emptyMessage); //доб-ить пустое сообщение в конец списка задач
+                    return;
+                }
+
+filteredTasks.forEach((task, index) => {
+    const li = document.createElement('li'); //создаю новый HTML-элемент
+    if (task.completed) {
+        li.classList.add('completed');
+    }
+
+    //при клике на задачу она будет помечаться выполненной/невыполненной
+const taskText = document.createElement('span');//<span> - конт-р для текста задачи (чтобы можно было стилиз-ать и доб-ять события)
+taskText.classList.add('task-text');//доб-яю CSS-класс task-text к <span>
+taskText.textContent = task.text;
+taskText.addEventListener('click', () => toggleTask(index)); //принажатии на задачу toggleTask - меняет статус задачи
+//зачёр-ся через CSS, который прим-ся когда у задачи completed: true
+
+
+const deleteBtn = document.createElement('button');
+deleteBtn.textContent = 'Удалить';
+deleteBtn.addEventListener('click', (e) => {
+    /*e - нужно, чтобы остановить всплытие выполнения задачи при клике*/
+    e.stopPropagation(); /*чтобы при клике на кнопку удаления не срабатывал 
+    также клик по самой задаче*/
+
+    deleteTask(index);
+});
+
+        // доб-ие созданные эл-ты в список
+            li.appendChild(taskText);
+            li.appendChild(deleteBtn);
+            taskList.appendChild(li);
+        }); // ← forEach закрыт ЗДЕСЬ
+    }
+
+
+
+
+    // ф-ция ДОБ-Я новой задачи
+function addTask() {
+    const text = taskInput.value.trim(); /*убирает лишние пробелы в начале и конце*/
+    if (text === '') return;
+
+    tasks.push({
+        text: text,
+        completed: false
+    });
+ taskInput.value = ''; //очищаю строку ввода
+                saveTasks(); //сохраняю массив в localStorge
+                renderTasks();//функция отрисовки, перерис-ю список на стр-це
+            }
+
+
+
+ // ф-ция ПЕРЕКЛЮЧЕНИЯ статуса задачи
+    function toggleTask(index) {
+    tasks[index].completed = !tasks[index].completed;
+    saveTasks();
+    renderTasks();
+}
+// ф-ция УДАЛЕНИЯ задачи
+function deleteTask(index) {
+    tasks.splice(index, 1); //1 - кол-во эл-ов для уд-ия
+    saveTasks();
+    renderTasks();
+}
+
+ function setFilter(filter) {
+                currentFilter = filter;
+                
+                filterAll.classList.remove('active');
+                filterCompleted.classList.remove('active');
+                filterUncompleted.classList.remove('active');
+                /*убираю CSS-класс active со всех кнопок фильтров
+чтобы ни одна кнопка не выглядела активной перед выбором новой*/
+                if (filter === 'all') {
+                    filterAll.classList.add('active');
+                } else if (filter === 'completed') {
+                    filterCompleted.classList.add('active');
+                } else if (filter === 'uncompleted') {
+                    filterUncompleted.classList.add('active');
+                }
+                /*доб-ю класс active ТОЛЬКО той кнопке, которая соот-ет выбр-му фильтру*/
+
+                renderTasks();
+            }
+
+            addTaskBtn.addEventListener('click', addTask);
+            
+            taskInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addTask();
+                }
+            });
+
+            filterAll.addEventListener('click', () => setFilter('all'));
+            filterCompleted.addEventListener('click', () => setFilter('completed'));
+            filterUncompleted.addEventListener('click', () => setFilter('uncompleted'));
+
+            renderTasks();
+        });
+
+       
+    </script>
+</body>
+</html>
